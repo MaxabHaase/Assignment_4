@@ -1,8 +1,13 @@
 # Import required packages
+import os
 import pandas as pd
 import re
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerLine2D
+
 import pprint as pp
+
+script_dir = os.path.dirname(__file__)
 
 # Define the regular expressions to be used to parse Sample ID column
 regex = r"(\d{5}) ([Vv]\d{1})\s+(\d+)"
@@ -112,6 +117,52 @@ def parse_excel(plate, dataframe):
     return data_frame
 
 
+# function that plots log intensity/log dilution for each subject/row.
+def plotter(plate, dataframe):
+    results_dir = os.path.join(script_dir, '{}/'.format(plate))
+    unique_samples = dataframe[plate]["PatientID"].unique()
+    rows = list(dataframe[plate])[4:53]
+    # names = list(dataframe[plate])[1:3]
+    for x in unique_samples:
+        print("Plotting for subject {}".format(x))
+        # index = 0
+        # name_use = []
+        for row in rows:
+            # index += 1
+            # print(dataframe[plate][row] is not 'NaN' and index < 4)
+            # value = dataframe[plate][row][1]
+            # if index < 4:
+            #     print(value)
+            #     pass
+                # name_use += row
+            # if dataframe[plate][row] is None and index < 4:
+            #     name_use = 'Standard'
+            # else:
+            index = dataframe[plate].loc[dataframe[plate]['PatientID'] == x].index
+            index_min = min(index)
+            index_max = max(index)
+            # print(x, index_min, index_max)
+            unique_reps = dataframe[plate]["Replicate"][index_min:index_max].unique()
+            plt.close()
+            plt.grid(True)
+            plt.title('{} {}'.format(x, row))
+            for rep in unique_reps:
+                index_ = dataframe[plate].loc[
+                    (dataframe[plate]['PatientID'] == x) & (dataframe[plate]["Replicate"] == rep)].index
+                index_min_ = min(index_)
+                index_max_ = max(index_)
+                x_ = (dataframe[plate]["Dilution"][index_min_:index_max_ + 1].values.tolist())
+                x_ = [float(i) for i in x_]
+                # print(x_)
+                y = dataframe[plate][row][index_min_:index_max_ + 1].values.tolist()
+                # print(y)
+                # plt.plot(x_, y)
+                line, = plt.loglog(x_, y, marker='o', basex=10, label=rep)
+                plt.legend(handler_map={line: HandlerLine2D(numpoints=4)})
+            if not os.path.isdir(results_dir):
+                os.makedirs(results_dir)
+            fig = plt.gcf()
+            fig.savefig(results_dir + '{}-{}.png'.format(x, row))
 
 
 # Call function to get list of plate names from excel file.
@@ -124,31 +175,38 @@ for plate in plates:
     excel[plate] = parse_excel(plate, sheet)
 
 
-unique_samples = excel['Plate 1']["PatientID"].unique()
-print(excel['Plate 1'])
-for x in unique_samples:
-    index = excel['Plate 1'].loc[excel['Plate 1']['PatientID'] == x].index
-    index_min = min(index)
-    index_max = max(index)
-    print(x, index_min, index_max)
-    unique_reps = excel['Plate 1']["Replicate"][index_min:index_max].unique()
-    plt.close()
-    plt.grid(True)
-    plt.title('{}-{}'.format(x,'PSMalpha2'))
-    for rep in unique_reps:
-        index_ = excel['Plate 1'].loc[(excel['Plate 1']['PatientID'] == x) & (excel['Plate 1']["Replicate"] == rep)].index
-        index_min_ = min(index_)
-        index_max_ = max(index_)
-        # print(rep, '\n', excel['Plate 1']["Dilution"][index_min_:index_max_+1], excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1])
-        x_ = (excel['Plate 1']["Dilution"][index_min_:index_max_+1].values.tolist())
-        x_ = [float(i) for i in x_]
-        print(x_)
-        y = excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1].values.tolist()
-        print(y)
-        # plt.plot(x_, y)
-        plt.loglog(x_, y, basex=10)
-    fig = plt.gcf()
-    fig.savefig('{}-{}.png'.format(x, 'PSMalpha2'))
+plotter('Plate 1', excel)
+# unique_samples = excel['Plate 1']["PatientID"].unique()
+# print(excel['Plate 1'])
+# for x in unique_samples:
+#     results_dir = os.path.join(script_dir, '{}/'.format('Plate 1'))
+#     index = excel['Plate 1'].loc[excel['Plate 1']['PatientID'] == x].index
+#     index_min = min(index)
+#     index_max = max(index)
+#     print(x, index_min, index_max)
+#     unique_reps = excel['Plate 1']["Replicate"][index_min:index_max].unique()
+#     # rows = list(excel['Plate 1'])
+#     # print(rows[4:53])
+#     plt.close()
+#     plt.grid(True)
+#     plt.title('{}-{}'.format(x,'PSMalpha2'))
+#     for rep in unique_reps:
+#         index_ = excel['Plate 1'].loc[(excel['Plate 1']['PatientID'] == x) & (excel['Plate 1']["Replicate"] == rep)].index
+#         index_min_ = min(index_)
+#         index_max_ = max(index_)
+#         # print(rep, '\n', excel['Plate 1']["Dilution"][index_min_:index_max_+1], excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1])
+#         x_ = (excel['Plate 1']["Dilution"][index_min_:index_max_+1].values.tolist())
+#         x_ = [float(i) for i in x_]
+#         print(x_)
+#         y = excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1].values.tolist()
+#         print(y)
+#         # plt.plot(x_, y)
+#         line, = plt.loglog(x_, y, marker='o', basex=10, label=rep)
+#         plt.legend(handler_map={line: HandlerLine2D(numpoints=4)})
+#     if not os.path.isdir(results_dir):
+#         os.makedirs(results_dir)
+#     fig = plt.gcf()
+#     fig.savefig(results_dir + '{}-{}.png'.format(x, 'PSMalpha2'))
 # for x in unique_samples:
 #     index = excel['Plate 1'].loc[excel['Plate 1']['PatientID'] == x].index
 #     index_min = min(index)
