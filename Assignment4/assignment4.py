@@ -1,6 +1,8 @@
 # Import required packages
 import pandas as pd
 import re
+import matplotlib.pyplot as plt
+import pprint as pp
 
 # Define the regular expressions to be used to parse Sample ID column
 regex = r"(\d{5}) ([Vv]\d{1})\s+(\d+)"
@@ -110,6 +112,8 @@ def parse_excel(plate, dataframe):
     return data_frame
 
 
+
+
 # Call function to get list of plate names from excel file.
 plates = read_in_excel(sheet)
 print(plates)
@@ -118,13 +122,40 @@ print(plates)
 for plate in plates:
     print(plate)
     excel[plate] = parse_excel(plate, sheet)
-print(excel)
 
 
-# dict = {}
-# for plate in plates:
-#     dataframe_temp = parse_excel(plate, sheet)
-#     dict[plate] = pd.DataFrame(dataframe_temp)
-# print(dict)
-
+unique_samples = excel['Plate 1']["PatientID"].unique()
+print(excel['Plate 1'])
+for x in unique_samples:
+    index = excel['Plate 1'].loc[excel['Plate 1']['PatientID'] == x].index
+    index_min = min(index)
+    index_max = max(index)
+    print(x, index_min, index_max)
+    unique_reps = excel['Plate 1']["Replicate"][index_min:index_max].unique()
+    plt.close()
+    plt.grid(True)
+    plt.title('{}-{}'.format(x,'PSMalpha2'))
+    for rep in unique_reps:
+        index_ = excel['Plate 1'].loc[(excel['Plate 1']['PatientID'] == x) & (excel['Plate 1']["Replicate"] == rep)].index
+        index_min_ = min(index_)
+        index_max_ = max(index_)
+        # print(rep, '\n', excel['Plate 1']["Dilution"][index_min_:index_max_+1], excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1])
+        x_ = (excel['Plate 1']["Dilution"][index_min_:index_max_+1].values.tolist())
+        x_ = [float(i) for i in x_]
+        print(x_)
+        y = excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1].values.tolist()
+        print(y)
+        # plt.plot(x_, y)
+        plt.loglog(x_, y, basex=10)
+    fig = plt.gcf()
+    fig.savefig('{}-{}.png'.format(x, 'PSMalpha2'))
+# for x in unique_samples:
+#     index = excel['Plate 1'].loc[excel['Plate 1']['PatientID'] == x].index
+#     index_min = min(index)
+#     index_max = max(index)
+#     fig, ax = plt.subplots(1, 1)
+#     plot = excel['Plate 1'][index_min:index_max].groupby("Replicate").plot(x="Dilution", y="PSMalpha2", ax=ax, logx=True, logy=True)
+#     print(fig)
+#     print(plot)
+#     plt.savefig('{}.png'.format(x))
 
