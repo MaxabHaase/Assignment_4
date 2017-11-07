@@ -4,9 +4,6 @@ import pandas as pd
 import re
 import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerLine2D
-
-import pprint as pp
-
 script_dir = os.path.dirname(__file__)
 
 # Define the regular expressions to be used to parse Sample ID column
@@ -17,6 +14,7 @@ stand_3 = r"([a-zA-Z]+) (\s+) (\d+)"
 vander = r"(\d+\s[A-Z]+\s[a-zA-Z]+) ([V]\d{1}) (\d+)"
 two_numbers = r"(\d{5})\s+(\d+)"
 healthy = r"([a-zA-Z]+\s[a-zA-Z]+) (\d+)"
+no_space = r"(\d{5}) ([Vv]\d{1})(\d+)"
 
 
 # Temporary code used to read in excel file as a pandas data frame
@@ -28,25 +26,15 @@ print(type(excel))
 
 # Functions
 
-# Get the name of the plates and add to a list
 def read_in_excel(excel_file):
     plates = []
     excel = pd.read_excel(excel_file, sheetname=None, header=1)
     for key in excel.keys():
         plates.append(key)
     return plates
+# Get the name of the plates and add to a list
 
 
-# function to parse first column and add three columns PatientID, Replicate, and Dilution to the original data frame
-# 1. take in the plate name and the excel sheet file path as arguments.
-# 2. Create a data frame consisting of the plate values
-# 3. Create a variable for the values in the column "Sample ID"
-# 4. Set a temp dictionary to with keys of the values we want to get from "Sample ID"
-# 5. Loop over each row in "Sample ID"
-# 6. Search each row with all defined regular expressions, since match 1 and match 6 are similar if
-# both are true, set match 1 = None
-# 7. If match is True update the values of the temp dict with the values of the groups
-# 8. join the temp dict to the data frame and return.
 def parse_excel(plate, dataframe):
     data_frame = pd.read_excel(dataframe, sheetname=plate, header=1)
     sample = data_frame['Sample ID']
@@ -59,8 +47,11 @@ def parse_excel(plate, dataframe):
         match4 = re.search(stand_2, items)
         match5 = re.search(stand_3, items)
         match6 = re.search(healthy, items)
+        match7 = re.search(no_space, items)
         if match1 and match6:
             match1 = None
+        if match4 and match7:
+            match4 = None
         if match0:
             temp_dict['PatientID'].append(match0.group(1))
             temp_dict['Replicate'].append(match0.group(2))
@@ -112,12 +103,28 @@ def parse_excel(plate, dataframe):
             temp_dict['PatientID'].append(match6.group(1))
             temp_dict['Replicate'].append('NaN')
             temp_dict['Dilution'].append(match6.group(2))
+            continue
+        if match7:
+            temp_dict['PatientID'].append(match7.group(1))
+            temp_dict['Replicate'].append(match7.group(2))
+            temp_dict['Dilution'].append(match7.group(3))
+            # print(items)
 
     data_frame = data_frame.join(pd.DataFrame(temp_dict, index=data_frame.index))
+    # print(temp_dict)
     return data_frame
+# function to parse first column and add three columns PatientID, Replicate, and Dilution to the original data frame
+# 1. take in the plate name and the excel sheet file path as arguments.
+# 2. Create a data frame consisting of the plate values
+# 3. Create a variable for the values in the column "Sample ID"
+# 4. Set a temp dictionary to with keys of the values we want to get from "Sample ID"
+# 5. Loop over each row in "Sample ID"
+# 6. Search each row with all defined regular expressions, since match 1 and match 6 are similar if
+# both are true, set match 1 = None
+# 7. If match is True update the values of the temp dict with the values of the groups
+# 8. join the temp dict to the data frame and return.
 
 
-# function that plots log intensity/log dilution for each subject/row.
 def plotter(plate, dataframe):
     results_dir = os.path.join(script_dir, '{}/'.format(plate))
     unique_samples = dataframe[plate]["PatientID"].unique()
@@ -125,32 +132,23 @@ def plotter(plate, dataframe):
     # names = list(dataframe[plate])[1:3]
     for x in unique_samples:
         print("Plotting for subject {}".format(x))
-        # index = 0
-        # name_use = []
         for row in rows:
-            # index += 1
-            # print(dataframe[plate][row] is not 'NaN' and index < 4)
-            # value = dataframe[plate][row][1]
-            # if index < 4:
-            #     print(value)
-            #     pass
-                # name_use += row
-            # if dataframe[plate][row] is None and index < 4:
-            #     name_use = 'Standard'
-            # else:
             index = dataframe[plate].loc[dataframe[plate]['PatientID'] == x].index
             index_min = min(index)
             index_max = max(index)
-            # print(x, index_min, index_max)
+            # print(row, x, index_min, index_max)
             unique_reps = dataframe[plate]["Replicate"][index_min:index_max].unique()
             plt.close()
             plt.grid(True)
             plt.title('{} {}'.format(x, row))
+            plt.ylabel('Intensity')
+            plt.xlabel('Dilution')
             for rep in unique_reps:
                 index_ = dataframe[plate].loc[
                     (dataframe[plate]['PatientID'] == x) & (dataframe[plate]["Replicate"] == rep)].index
                 index_min_ = min(index_)
                 index_max_ = max(index_)
+                # print(index)
                 x_ = (dataframe[plate]["Dilution"][index_min_:index_max_ + 1].values.tolist())
                 x_ = [float(i) for i in x_]
                 # print(x_)
@@ -163,57 +161,30 @@ def plotter(plate, dataframe):
                 os.makedirs(results_dir)
             fig = plt.gcf()
             fig.savefig(results_dir + '{}-{}.png'.format(x, row))
+# function that plots log intensity/log dilution for each subject/row. IT IS VERY SLOW!
+# 1. take in arguments for the excel sheet and plate number
+# 2. Set a path to put the out put pngs
+# 3. Get a list of unique subjects in the plate
+# 4. Get the column names for the plots
+# 5. loop through each Patient
+# 6. loop through each row, for the Patient
+# 7. get the index values (rows) of current Patient, get the max/min values
+# 8. get the number of visits
+# 9. loop through the visits
+# 10. Get the indices for the visits, get max/min
+# 11. get the x/y values for the indices of the current visit.
+# 12. plot the line log/log graph of x/y values
+# 13. add folder with plate name and add graphs of that plate to the folder
+# 14. save figure.
 
 
 # Call function to get list of plate names from excel file.
 plates = read_in_excel(sheet)
-print(plates)
+# print(plates)
 
 # loop over each plate name, calling parse_excel and updating the plate data frames
 for plate in plates:
-    print(plate)
+    # print(plate)
     excel[plate] = parse_excel(plate, sheet)
-
-
-plotter('Plate 1', excel)
-# unique_samples = excel['Plate 1']["PatientID"].unique()
-# print(excel['Plate 1'])
-# for x in unique_samples:
-#     results_dir = os.path.join(script_dir, '{}/'.format('Plate 1'))
-#     index = excel['Plate 1'].loc[excel['Plate 1']['PatientID'] == x].index
-#     index_min = min(index)
-#     index_max = max(index)
-#     print(x, index_min, index_max)
-#     unique_reps = excel['Plate 1']["Replicate"][index_min:index_max].unique()
-#     # rows = list(excel['Plate 1'])
-#     # print(rows[4:53])
-#     plt.close()
-#     plt.grid(True)
-#     plt.title('{}-{}'.format(x,'PSMalpha2'))
-#     for rep in unique_reps:
-#         index_ = excel['Plate 1'].loc[(excel['Plate 1']['PatientID'] == x) & (excel['Plate 1']["Replicate"] == rep)].index
-#         index_min_ = min(index_)
-#         index_max_ = max(index_)
-#         # print(rep, '\n', excel['Plate 1']["Dilution"][index_min_:index_max_+1], excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1])
-#         x_ = (excel['Plate 1']["Dilution"][index_min_:index_max_+1].values.tolist())
-#         x_ = [float(i) for i in x_]
-#         print(x_)
-#         y = excel['Plate 1']["PSMalpha2"][index_min_:index_max_+1].values.tolist()
-#         print(y)
-#         # plt.plot(x_, y)
-#         line, = plt.loglog(x_, y, marker='o', basex=10, label=rep)
-#         plt.legend(handler_map={line: HandlerLine2D(numpoints=4)})
-#     if not os.path.isdir(results_dir):
-#         os.makedirs(results_dir)
-#     fig = plt.gcf()
-#     fig.savefig(results_dir + '{}-{}.png'.format(x, 'PSMalpha2'))
-# for x in unique_samples:
-#     index = excel['Plate 1'].loc[excel['Plate 1']['PatientID'] == x].index
-#     index_min = min(index)
-#     index_max = max(index)
-#     fig, ax = plt.subplots(1, 1)
-#     plot = excel['Plate 1'][index_min:index_max].groupby("Replicate").plot(x="Dilution", y="PSMalpha2", ax=ax, logx=True, logy=True)
-#     print(fig)
-#     print(plot)
-#     plt.savefig('{}.png'.format(x))
-
+    print(plate)
+    plotter(plate, excel)
