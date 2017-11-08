@@ -4,9 +4,16 @@ import pandas as pd
 import re
 import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerLine2D
+import argparse
 
-# Get the directory path.
+# Get the path of the current directory.
 script_dir = os.path.dirname(__file__)
+
+# Argument handling
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Process, reformat, and plot the data in the excel file.')
+    parser.add_argument('-f', '--file', action='store', type=str, required=True, help='File name of the excel sheet')
+    args = parser.parse_args()
 
 # Define the regular expressions to be used to parse Sample ID column
 regex = r"(\d{5}) ([Vv]\d{1})\s+(\d+)"
@@ -20,14 +27,16 @@ no_space = r"(\d{5}) ([Vv]\d{1})(\d+)"
 
 
 # Functions
-
-def read_in_excel(excel_file):
+def read_in_excel(excel_file, excel):
     plates = []
-    excel = pd.read_excel(excel_file, sheetname=None, header=1)
     for key in excel.keys():
         plates.append(key)
     return plates
 # Get the name of the plates and add to a list
+# 1. set a empty list
+# 2. read in the excel file
+# 3. for the keys (plates) in the excel sheet, add to the list
+# 4. return the list of plate values.
 
 
 def parse_excel(plate, dataframe):
@@ -43,7 +52,7 @@ def parse_excel(plate, dataframe):
         match5 = re.search(stand_3, items)
         match6 = re.search(healthy, items)
         match7 = re.search(no_space, items)
-        if match1 and match6:
+        if match1 and match6:    # two if statements to control for rows that are true for multiple matches.
             match1 = None
         if match4 and match7:
             match4 = None
@@ -227,18 +236,15 @@ def plotter(plate, dataframe):
 # 14. save figure.
 
 
-
-
-# Temporary code used to read in excel file as a pandas data frame
-sheet = '/Users/maxhaase/Desktop/Grad_School/Fall_2017/Intro_to_programming/Files/Assignment_4/Assignment4/06222016 Staph Array Data.xlsx'
+# code for getting the path value of the supplied excel file and reading in the excel sheet.
+sheet = os.path.join(script_dir, '{}'.format(args.file))
 excel = pd.read_excel(sheet, sheetname=None, header=1)
 
 # Call function to get list of plate names from excel file.
-plates = read_in_excel(sheet)
+plates = read_in_excel(sheet, excel)
 
 # loop over each plate name, calling parse_excel(), tab_(), and plotter().
 for plate in plates:
     excel[plate] = parse_excel(plate, sheet)
     excel[plate] = tab_(plate, excel)
     plotter(plate, excel)
-
