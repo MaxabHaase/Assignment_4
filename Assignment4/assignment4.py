@@ -4,6 +4,8 @@ import pandas as pd
 import re
 import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerLine2D
+from matplotlib.backends.backend_pdf import PdfPages
+
 script_dir = os.path.dirname(__file__)
 
 # Define the regular expressions to be used to parse Sample ID column
@@ -20,8 +22,8 @@ no_space = r"(\d{5}) ([Vv]\d{1})(\d+)"
 # Temporary code used to read in excel file as a pandas data frame
 sheet = '/Users/maxhaase/Desktop/Grad_School/Fall_2017/Intro_to_programming/Files/Assignment_4/Assignment4/06222016 Staph Array Data.xlsx'
 excel = pd.read_excel(sheet, sheetname=None, header=1)
-excel_plate1 = excel['Plate 1']
-print(type(excel))
+# excel_plate1 = excel['Plate 1']
+# print(type(excel))
 
 
 # Functions
@@ -132,6 +134,7 @@ def plotter(plate, dataframe):
     # names = list(dataframe[plate])[1:3]
     for x in unique_samples:
         print("Plotting for subject {}".format(x))
+        pdf = []
         for row in rows:
             index = dataframe[plate].loc[dataframe[plate]['PatientID'] == x].index
             index_min = min(index)
@@ -153,14 +156,15 @@ def plotter(plate, dataframe):
                 x_ = [float(i) for i in x_]
                 # print(x_)
                 y = dataframe[plate][row][index_min_:index_max_ + 1].values.tolist()
-                # print(y)
-                # plt.plot(x_, y)
+                print(y)
+                plt.plot(x_, y)
                 line, = plt.loglog(x_, y, marker='o', basex=10, label=rep)
                 plt.legend(handler_map={line: HandlerLine2D(numpoints=4)})
             if not os.path.isdir(results_dir):
                 os.makedirs(results_dir)
             fig = plt.gcf()
             fig.savefig(results_dir + '{}-{}.png'.format(x, row))
+
 # function that plots log intensity/log dilution for each subject/row. IT IS VERY SLOW!
 # 1. take in arguments for the excel sheet and plate number
 # 2. Set a path to put the out put pngs
@@ -178,6 +182,46 @@ def plotter(plate, dataframe):
 # 14. save figure.
 
 
+#
+def tab_(plate, file):
+    if plate == "Plate11":
+        excel_plate = file[plate]
+        # print(excel_plate)
+        excel_plate.pop("Sample ID")
+        # print(excel_plate)
+        x, y, z = excel_plate.pop("PatientID"), excel_plate.pop("Replicate"), excel_plate.pop("Dilution")
+        # print(x, y, z)
+        x, y, z = pd.DataFrame(x), pd.DataFrame(y), pd.DataFrame(z)
+        # print(x, y, z)
+        excel_plate.insert(0, "PatientID", x)
+        excel_plate.insert(1, "Replicate", y)
+        excel_plate.insert(2, "Dilution", z)
+    else:
+        excel_plate = file[plate]
+        # print(excel_plate)
+        excel_plate.pop("Sample ID")
+        # print(excel_plate)
+        x, y, z = excel_plate.pop("PatientID"), excel_plate.pop("Replicate"), excel_plate.pop("Dilution")
+        a, b, c = excel_plate.pop("Hospital "), excel_plate.pop("Age"), excel_plate.pop("Gender")
+        # print(x, y, z)
+        x, y, z, a, b, c = pd.DataFrame(x), pd.DataFrame(y), pd.DataFrame(z), pd.DataFrame(a), pd.DataFrame(
+            b), pd.DataFrame(c)
+        # print(x, y, z)
+        a = a.fillna(method='ffill')
+        b = b.fillna(method='ffill')
+        c = c.fillna(method='ffill')
+        excel_plate.insert(0, "PatientID", x)
+        excel_plate.insert(1, "Replicate", y)
+        excel_plate.insert(2, "Dilution", z)
+        excel_plate.insert(3, "Hospital", a)
+        excel_plate.insert(4, "Age", b)
+        excel_plate.insert(5, "Gender", c)
+    return excel_plate
+
+
+
+
+
 # Call function to get list of plate names from excel file.
 plates = read_in_excel(sheet)
 # print(plates)
@@ -186,5 +230,8 @@ plates = read_in_excel(sheet)
 for plate in plates:
     # print(plate)
     excel[plate] = parse_excel(plate, sheet)
-    print(plate)
-    plotter(plate, excel)
+    # print(plate)
+    # plotter(plate, excel)
+    df = tab_(plate, excel)
+    print(df)
+# df = tab_("Plate 1", excel)
