@@ -4,8 +4,8 @@ import pandas as pd
 import re
 import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerLine2D
-from matplotlib.backends.backend_pdf import PdfPages
 
+# Get the directory path.
 script_dir = os.path.dirname(__file__)
 
 # Define the regular expressions to be used to parse Sample ID column
@@ -17,13 +17,6 @@ vander = r"(\d+\s[A-Z]+\s[a-zA-Z]+) ([V]\d{1}) (\d+)"
 two_numbers = r"(\d{5})\s+(\d+)"
 healthy = r"([a-zA-Z]+\s[a-zA-Z]+) (\d+)"
 no_space = r"(\d{5}) ([Vv]\d{1})(\d+)"
-
-
-# Temporary code used to read in excel file as a pandas data frame
-sheet = '/Users/maxhaase/Desktop/Grad_School/Fall_2017/Intro_to_programming/Files/Assignment_4/Assignment4/06222016 Staph Array Data.xlsx'
-excel = pd.read_excel(sheet, sheetname=None, header=1)
-# excel_plate1 = excel['Plate 1']
-# print(type(excel))
 
 
 # Functions
@@ -127,62 +120,6 @@ def parse_excel(plate, dataframe):
 # 8. join the temp dict to the data frame and return.
 
 
-def plotter(plate, dataframe):
-    results_dir = os.path.join(script_dir, '{}/'.format(plate))
-    unique_samples = dataframe[plate]["PatientID"].unique()
-    rows = list(dataframe[plate])[4:53]
-    # names = list(dataframe[plate])[1:3]
-    for x in unique_samples:
-        print("Plotting for subject {}".format(x))
-        pdf = []
-        for row in rows:
-            index = dataframe[plate].loc[dataframe[plate]['PatientID'] == x].index
-            index_min = min(index)
-            index_max = max(index)
-            # print(row, x, index_min, index_max)
-            unique_reps = dataframe[plate]["Replicate"][index_min:index_max].unique()
-            plt.close()
-            plt.grid(True)
-            plt.title('{} {}'.format(x, row))
-            plt.ylabel('Intensity')
-            plt.xlabel('Dilution')
-            for rep in unique_reps:
-                index_ = dataframe[plate].loc[
-                    (dataframe[plate]['PatientID'] == x) & (dataframe[plate]["Replicate"] == rep)].index
-                index_min_ = min(index_)
-                index_max_ = max(index_)
-                # print(index)
-                x_ = (dataframe[plate]["Dilution"][index_min_:index_max_ + 1].values.tolist())
-                x_ = [float(i) for i in x_]
-                # print(x_)
-                y = dataframe[plate][row][index_min_:index_max_ + 1].values.tolist()
-                print(y)
-                plt.plot(x_, y)
-                line, = plt.loglog(x_, y, marker='o', basex=10, label=rep)
-                plt.legend(handler_map={line: HandlerLine2D(numpoints=4)})
-            if not os.path.isdir(results_dir):
-                os.makedirs(results_dir)
-            fig = plt.gcf()
-            fig.savefig(results_dir + '{}-{}.png'.format(x, row))
-
-# function that plots log intensity/log dilution for each subject/row. IT IS VERY SLOW!
-# 1. take in arguments for the excel sheet and plate number
-# 2. Set a path to put the out put pngs
-# 3. Get a list of unique subjects in the plate
-# 4. Get the column names for the plots
-# 5. loop through each Patient
-# 6. loop through each row, for the Patient
-# 7. get the index values (rows) of current Patient, get the max/min values
-# 8. get the number of visits
-# 9. loop through the visits
-# 10. Get the indices for the visits, get max/min
-# 11. get the x/y values for the indices of the current visit.
-# 12. plot the line log/log graph of x/y values
-# 13. add folder with plate name and add graphs of that plate to the folder
-# 14. save figure.
-
-
-#
 def tab_(plate, file):
     if plate == "Plate11":
         excel_plate = file[plate]
@@ -216,22 +153,92 @@ def tab_(plate, file):
         excel_plate.insert(3, "Hospital", a)
         excel_plate.insert(4, "Age", b)
         excel_plate.insert(5, "Gender", c)
+    excel_plate.to_csv("{}.csv".format(str(plate)), sep=',', na_rep='NaN', index=False)
     return excel_plate
+# Function will reformat each plate in the excel file.
+# 1. remove the column Sample ID
+# 2. pop out the columns for PatientID, Replicate, Dilution, Hospital, Age, and Gender
+# 3. convert popped columns to pandas data frames
+# 4. For columns: Hospital, Age, and Gender, fill in NaN's with the implied values.
+# 5. Insert the columns back into the beginning.
+# 6. since plate 11 has no Hospital, Age, and Gender columns, we only reformat the PatientID, Replicate, and Dilution
+
+
+def plotter(plate, dataframe):
+    print("Making plots for {}".format(plate))
+    results_dir = os.path.join(script_dir, '{}/'.format(plate))
+    unique_samples = dataframe[plate]["PatientID"].unique()
+    if plate == "Plate11":
+        rows = list(dataframe[plate])[4:53]
+    else:
+        rows = list(dataframe[plate])[6:55]
+    # names = list(dataframe[plate])[1:3]
+    for x in unique_samples:
+        print("Plotting for subject {}".format(x))
+        for row in rows:
+            index = dataframe[plate].loc[dataframe[plate]['PatientID'] == x].index
+            index_min = min(index)
+            index_max = max(index)
+            # print(row, x, index_min, index_max)
+            unique_reps = dataframe[plate]["Replicate"][index_min:index_max].unique()
+            plt.close()
+            if x == 'Standard':
+                plt.title('{} - {}'.format(x, row))
+                pass
+            else:
+                hospital, age, gender = dataframe[plate].iloc[index_min, 3], \
+                                    dataframe[plate].iloc[index_min, 4], dataframe[plate].iloc[index_min, 5]
+                plt.title('{} ({} {} {}) {}'.format(x, hospital, age, gender, row))
+            plt.grid(True)
+            plt.ylabel('Intensity')
+            plt.xlabel('Dilution')
+            for rep in unique_reps:
+                index_ = dataframe[plate].loc[
+                    (dataframe[plate]['PatientID'] == x) & (dataframe[plate]["Replicate"] == rep)].index
+                index_min_ = min(index_)
+                index_max_ = max(index_)
+                # print(index)
+                x_ = (dataframe[plate]["Dilution"][index_min_:index_max_ + 1].values.tolist())
+                x_ = [float(i) for i in x_]
+                # print(x_)
+                y = dataframe[plate][row][index_min_:index_max_ + 1].values.tolist()
+                plt.plot(x_, y)
+                line, = plt.loglog(x_, y, marker='o', basex=10, label=rep)
+                plt.legend(handler_map={line: HandlerLine2D(numpoints=4)})
+            if not os.path.isdir(results_dir):
+                os.makedirs(results_dir)
+            fig = plt.gcf()
+            fig.savefig(results_dir + '{}-{}-{}.png'.format(plate, x, row))
+
+# function that plots log intensity/log dilution for each subject/row. IT IS VERY SLOW!
+# 1. take in arguments for the excel sheet and plate number
+# 2. Set a path to put the out put pngs
+# 3. Get a list of unique subjects in the plate
+# 4. Get the column names for the plots
+# 5. loop through each Patient
+# 6. loop through each row, for the Patient
+# 7. get the index values (rows) of current Patient, get the max/min values
+# 8. get the number of visits
+# 9. loop through the visits
+# 10. Get the indices for the visits, get max/min
+# 11. get the x/y values for the indices of the current visit.
+# 12. plot the line log/log graph of x/y values
+# 13. add folder with plate name and add graphs of that plate to the folder
+# 14. save figure.
 
 
 
 
+# Temporary code used to read in excel file as a pandas data frame
+sheet = '/Users/maxhaase/Desktop/Grad_School/Fall_2017/Intro_to_programming/Files/Assignment_4/Assignment4/06222016 Staph Array Data.xlsx'
+excel = pd.read_excel(sheet, sheetname=None, header=1)
 
 # Call function to get list of plate names from excel file.
 plates = read_in_excel(sheet)
-# print(plates)
 
-# loop over each plate name, calling parse_excel and updating the plate data frames
+# loop over each plate name, calling parse_excel(), tab_(), and plotter().
 for plate in plates:
-    # print(plate)
     excel[plate] = parse_excel(plate, sheet)
-    # print(plate)
-    # plotter(plate, excel)
-    df = tab_(plate, excel)
-    print(df)
-# df = tab_("Plate 1", excel)
+    excel[plate] = tab_(plate, excel)
+    plotter(plate, excel)
+
