@@ -190,7 +190,6 @@ def plotter(plate, dataframe):
             index_max = max(index)
             # print(row, x, index_min, index_max)
             unique_reps = dataframe[plate]["Replicate"][index_min:index_max].unique()
-            plt.close()
             if x == 'Standard':
                 plt.title('{} - {}'.format(x, row))
                 pass
@@ -218,6 +217,9 @@ def plotter(plate, dataframe):
                 os.makedirs(results_dir)
             fig = plt.gcf()
             fig.savefig(results_dir + '{}-{}-{}.png'.format(plate, x, row))
+            plt.close()
+
+
 
 # function that plots log intensity/log dilution for each subject/row. IT IS VERY SLOW!
 # 1. take in arguments for the excel sheet and plate number
