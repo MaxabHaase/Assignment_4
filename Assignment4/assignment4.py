@@ -61,33 +61,16 @@ def parse_excel(plate, dataframe):
             temp_dict['Replicate'].append(match0.group(2))
             temp_dict['Dilution'].append(match0.group(3))
             continue
-            # print(items)
-            # print(match0)
-            # print(match0.group(0))
-            # print(match0.group(1))
-            # print(match0.group(2))
-            # print(match0.group(3))
         if match1:
             temp_dict['PatientID'].append(match1.group(1))
             temp_dict['Replicate'].append('NaN')
             temp_dict['Dilution'].append(match1.group(2))
             continue
-            # print(items)
-            # print(match1)
-            # print(match1.group(0))
-            # print(match1.group(1))
-            # print(match1.group(2))
         if match2:
             temp_dict['PatientID'].append(match2.group(1))
             temp_dict['Replicate'].append(match2.group(2))
             temp_dict['Dilution'].append(match2.group(3))
             continue
-            # print(items)
-            # print(match2)
-            # print(match2.group(0))
-            # print(match2.group(1))
-            # print(match2.group(2))
-            # print(match2.group(3))
         if match3:
             temp_dict['PatientID'].append(match3.group(1))
             temp_dict['Replicate'].append('NaN')
@@ -112,7 +95,6 @@ def parse_excel(plate, dataframe):
             temp_dict['PatientID'].append(match7.group(1))
             temp_dict['Replicate'].append(match7.group(2))
             temp_dict['Dilution'].append(match7.group(3))
-            # print(items)
 
     data_frame = data_frame.join(pd.DataFrame(temp_dict, index=data_frame.index))
     # print(temp_dict)
@@ -132,27 +114,19 @@ def parse_excel(plate, dataframe):
 def tab_(plate, file):
     if plate == "Plate11":
         excel_plate = file[plate]
-        # print(excel_plate)
         excel_plate.pop("Sample ID")
-        # print(excel_plate)
         x, y, z = excel_plate.pop("PatientID"), excel_plate.pop("Replicate"), excel_plate.pop("Dilution")
-        # print(x, y, z)
         x, y, z = pd.DataFrame(x), pd.DataFrame(y), pd.DataFrame(z)
-        # print(x, y, z)
         excel_plate.insert(0, "PatientID", x)
         excel_plate.insert(1, "Replicate", y)
         excel_plate.insert(2, "Dilution", z)
     else:
         excel_plate = file[plate]
-        # print(excel_plate)
         excel_plate.pop("Sample ID")
-        # print(excel_plate)
         x, y, z = excel_plate.pop("PatientID"), excel_plate.pop("Replicate"), excel_plate.pop("Dilution")
         a, b, c = excel_plate.pop("Hospital "), excel_plate.pop("Age"), excel_plate.pop("Gender")
-        # print(x, y, z)
         x, y, z, a, b, c = pd.DataFrame(x), pd.DataFrame(y), pd.DataFrame(z), pd.DataFrame(a), pd.DataFrame(
             b), pd.DataFrame(c)
-        # print(x, y, z)
         a = a.fillna(method='ffill')
         b = b.fillna(method='ffill')
         c = c.fillna(method='ffill')
@@ -181,14 +155,12 @@ def plotter(plate, dataframe):
         rows = list(dataframe[plate])[4:53]
     else:
         rows = list(dataframe[plate])[6:55]
-    # names = list(dataframe[plate])[1:3]
     for x in unique_samples:
         print("Plotting for subject {}".format(x))
         for row in rows:
             index = dataframe[plate].loc[dataframe[plate]['PatientID'] == x].index
             index_min = min(index)
             index_max = max(index)
-            # print(row, x, index_min, index_max)
             unique_reps = dataframe[plate]["Replicate"][index_min:index_max].unique()
             if x == 'Standard':
                 plt.title('{} - {}'.format(x, row))
@@ -205,10 +177,8 @@ def plotter(plate, dataframe):
                     (dataframe[plate]['PatientID'] == x) & (dataframe[plate]["Replicate"] == rep)].index
                 index_min_ = min(index_)
                 index_max_ = max(index_)
-                # print(index)
                 x_ = (dataframe[plate]["Dilution"][index_min_:index_max_ + 1].values.tolist())
                 x_ = [float(i) for i in x_]
-                # print(x_)
                 y = dataframe[plate][row][index_min_:index_max_ + 1].values.tolist()
                 plt.plot(x_, y)
                 line, = plt.loglog(x_, y, marker='o', basex=10, label=rep)
